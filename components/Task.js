@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, TouchableHighlight } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const Task = (props) => {
   const [isOptionsVisible, setOptionsVisible] = useState(false);
-  const [isChanged, setIsChanged] = useState(true);
-  const { tasksChanged, handleTasksChanged } = props;
 
   const checkDeadline = () => {
     currentDate = new Date().toLocaleDateString();
@@ -17,24 +15,7 @@ const Task = (props) => {
     }
   }
 
-  const handleIsChanged = () => {
-    setIsChanged(false);
-  }
-
-  useEffect(() => {
-    alert('ok')
-    
-    setIsChanged(tasksChanged);
-    console.log(tasksChanged);
-  }, []);
-
-  useEffect(() => {
-    console.log(isChanged);
-  }, [isChanged]);
-
   const showHideOptions = () => {
-    // handleTasksChanged();
-    handleIsChanged();
     setOptionsVisible(!isOptionsVisible);
   };
 
@@ -82,7 +63,7 @@ const Task = (props) => {
         </View>
       </View>
 
-      {(isOptionsVisible && !isChanged) &&
+      {isOptionsVisible &&
         <View style={styles.itemDown}>
           <TouchableHighlight onPress={() => props.handleEdit(props.index)} style={[styles.taskOption, { backgroundColor: 'deepskyblue' }]} underlayColor="lightgrey">
             <Text style={styles.optionText}>Edit</Text>

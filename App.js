@@ -22,7 +22,6 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [editing, setEditing] = useState(false);
   const [toBeEditedTaskIndex, setToBeEditedTaskIndex] = useState();
-  const [tasksChanged, setTasksChanged] = useState(false);
   const allTasksPath = `${FileSystem.documentDirectory}/all-tasks.json`;
   const isInitialRender = useRef(true);
 
@@ -33,11 +32,6 @@ export default function App() {
       isInitialRender.current = false;
     }
   }, [allTasks]);
-
-  //
-  useEffect(() => {
-    console.log(selectedTasks);
-  }, [selectedTasks]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -249,7 +243,6 @@ export default function App() {
     setSelectedTasks(array);
     setTaskType(type);
     setTaskColor(color);
-    setTasksChanged(true);
   };
 
   const moveTaskForward = (type, index) => {
@@ -371,10 +364,6 @@ export default function App() {
     }, 3000);
   };
 
-  const handleTasksChanged = () => {
-    setTasksChanged(false);
-  };
-
   //
 
   return (
@@ -424,7 +413,7 @@ export default function App() {
             {
               selectedTasks.map((task, index) => {
                 return (
-                  <Task key={index} index={index} type={task.type} name={task.name} deadline={task.deadline} color={taskColor} tasksChanged={tasksChanged} handleTasksChanged={handleTasksChanged} moveForward={moveTaskForward} moveBackward={moveTaskBackward} handleEdit={handleEditTask} handleDelete={handleDeleteTask} handleInfo={handleInfoTask} />
+                  <Task key={task.type + index} index={index} type={task.type} name={task.name} deadline={task.deadline} color={taskColor} moveForward={moveTaskForward} moveBackward={moveTaskBackward} handleEdit={handleEditTask} handleDelete={handleDeleteTask} handleInfo={handleInfoTask} />
                 )
               })
             }
