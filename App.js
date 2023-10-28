@@ -127,6 +127,11 @@ export default function App() {
   };
 
   const handleSaveEditedTask = () => {
+    if (taskName.trim() === '') {
+      showWarningMessage('Task name cannot be empty');
+      return;
+    }
+
     const taskIndex = toBeEditedTaskIndex;
     const selectedTask = selectedTasks[taskIndex];
     let updatedTasks = {};
@@ -350,8 +355,8 @@ export default function App() {
   };
 
   const handleDateConfirm = (date) => {
-    setTaskDeadline(date);
     hideDatePicker();
+    setTaskDeadline(date);
   };
 
   const showWarningMessage = (message) => {
@@ -463,6 +468,7 @@ export default function App() {
                   <DateTimePickerModal
                     isVisible={showDatePicker}
                     mode="date"
+                    date={taskDeadline}
                     minimumDate={new Date()}
                     onConfirm={handleDateConfirm}
                     onCancel={hideDatePicker}
@@ -493,7 +499,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f2f4',
   },
   tasksWrapper: {
-    paddingTop: 40,
+    paddingTop: 10,
     paddingHorizontal: 20,
   },
   tasksHeader: {
@@ -619,7 +625,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 13,
     position: 'absolute',
-    top: 60,
+    top: 30,
     right: 20,
     zIndex: 100,
   },
