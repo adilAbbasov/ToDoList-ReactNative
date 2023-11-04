@@ -6,20 +6,26 @@ import * as FileSystem from 'expo-file-system';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 export default function App() {
-  const [taskName, setTaskName] = useState('');
-  const [taskDeadline, setTaskDeadline] = useState(new Date());
-  const [toDoTasks, setToDoTasks] = useState([]);
-  const [inProgressTasks, setInProgressTasks] = useState([]);
-  const [doneTasks, setDoneTasks] = useState([]);
+  const [task, setTask] = useState({
+    taskName: '',
+    taskDeadline: new Date(),
+    taskType: 'todo',
+    taskColor: 'orange'
+  });
+  const { taskName, taskDeadline, taskType, taskColor } = task;
+
+  const [taskLists, setTaskLists] = useState({
+    toDoTasks: [],
+    inProgressTasks: [],
+    doneTasks: [],
+  });
+  const { toDoTasks, inProgressTasks, doneTasks } = taskLists;
+
   const [selectedTasks, setSelectedTasks] = useState(toDoTasks);
-  const [taskType, setTaskType] = useState('todo');
-  const [taskColor, setTaskColor] = useState('orange');
-  const [allTasks, setAllTasks] = useState({ toDoTasks, inProgressTasks, doneTasks });
   const [isDialogVisible, setDialogVisible] = useState(false);
   const [warning, setWarning] = useState('');
   const [showWarning, setShowWarning] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [editing, setEditing] = useState(false);
   const [toBeEditedTaskIndex, setToBeEditedTaskIndex] = useState();
   const allTasksPath = `${FileSystem.documentDirectory}/all-tasks.json`;
@@ -31,17 +37,7 @@ export default function App() {
     } else {
       isInitialRender.current = false;
     }
-  }, [allTasks]);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
+  }, [taskLists]);
 
   useEffect(() => {
     async function loadAllTasks() {
@@ -56,17 +52,14 @@ export default function App() {
           const loadedInProgressTasks = loadedTasks.inProgressTasks || [];
           const loadedDoneTasks = loadedTasks.doneTasks || [];
 
-          setToDoTasks(loadedToDoTasks);
-          setInProgressTasks(loadedInProgressTasks);
-          setDoneTasks(loadedDoneTasks);
-
-          setSelectedTasks(loadedToDoTasks);
-          setAllTasks({
-            ...allTasks,
+          setTaskLists({
+            ...taskLists,
             toDoTasks: loadedToDoTasks,
             inProgressTasks: loadedInProgressTasks,
             doneTasks: loadedDoneTasks
-          });
+          })
+
+          setSelectedTasks(loadedToDoTasks);
         }
       } catch (error) {
         console.error('Error loading combined arrays:', error);
@@ -78,7 +71,7 @@ export default function App() {
 
   async function saveAllTasks() {
     try {
-      const jsonString = JSON.stringify(allTasks);
+      const jsonString = JSON.stringify(taskLists);
       await FileSystem.writeAsStringAsync(allTasksPath, jsonString, { encoding: FileSystem.EncodingType.UTF8 });
 
       console.log('All tasks saved to a file.');
@@ -93,17 +86,28 @@ export default function App() {
     if (taskName.trim() === '') {
       showWarningMessage('Task name cannot be empty');
     } else {
+      console.log(task.taskDeadline);
+      console.log(taskDeadline);
+
       const newTask = {
         type: 'todo',
         name: taskName,
         deadline: taskDeadline.toLocaleDateString(),
       };
 
+      setTaskLists({
+        ...taskLists,
+        toDoTasks: [...toDoTasks, newTask],
+      })
+
       setSelectedTasks([...selectedTasks, newTask]);
-      setToDoTasks([...toDoTasks, newTask]);
-      setAllTasks({ ...allTasks, toDoTasks: [...toDoTasks, newTask] })
-      setTaskName('');
-      setTaskDeadline(new Date());
+
+      setTask({
+        ...task,
+        taskName: '',
+        taskDeadline: new Date()
+      })
+
       closeDialog();
     }
   };
@@ -117,9 +121,12 @@ export default function App() {
     const year = parseInt(dateParts[2]);
     const dateObject = new Date(year, month, day);
 
-    setTaskName(selectedTask.name);
-    setTaskDeadline(dateObject);
-    setTaskType(selectedTask.type);
+    setTask({
+      ...task,
+      taskName: selectedTask.name,
+      taskDeadline: dateObject,
+      taskType: selectedTask.type,
+    })
 
     setEditing(true);
     setToBeEditedTaskIndex(index);
@@ -135,6 +142,9 @@ export default function App() {
     const taskIndex = toBeEditedTaskIndex;
     const selectedTask = selectedTasks[taskIndex];
     let updatedTasks = {};
+
+    console.log(task.taskDeadline);
+    console.log(taskDeadline);
 
     const updatedTask = {
       ...selectedTask,
@@ -152,7 +162,6 @@ export default function App() {
       case 'todo':
         const updatedToDoTasks = [...toDoTasks];
         updatedToDoTasks[taskIndex] = updatedTask;
-        setToDoTasks(updatedToDoTasks);
 
         updatedTasks = {
           toDoTasks: updatedToDoTasks,
@@ -164,7 +173,6 @@ export default function App() {
       case 'inprogress':
         const updatedInProgressTasks = [...inProgressTasks];
         updatedInProgressTasks[taskIndex] = updatedTask;
-        setInProgressTasks(updatedInProgressTasks);
 
         updatedTasks = {
           toDoTasks,
@@ -176,7 +184,6 @@ export default function App() {
       case 'done':
         const updatedDoneTasks = [...doneTasks];
         updatedDoneTasks[taskIndex] = updatedTask;
-        setDoneTasks(updatedDoneTasks);
 
         updatedTasks = {
           toDoTasks,
@@ -189,7 +196,7 @@ export default function App() {
         break;
     }
 
-    setAllTasks((prevAllTasks) => ({ ...prevAllTasks, ...updatedTasks }));
+    setTaskLists((prevTasks) => ({ ...prevTasks, ...updatedTasks }));
     setEditing(false);
     closeDialog();
   };
@@ -198,12 +205,10 @@ export default function App() {
     const selectedTask = selectedTasks[index];
     let updatedTasks = {};
 
-    setSelectedTasks((prevTasks) => prevTasks.filter((_, i) => i !== index));
+    setSelectedTasks(selectedTasks.filter((_, i) => i !== index));
 
     switch (selectedTask.type) {
       case 'todo':
-        setToDoTasks((prevArray) => prevArray.filter((_, i) => i !== index));
-
         updatedTasks = {
           toDoTasks: toDoTasks.filter((_, i) => i !== index),
           inProgressTasks,
@@ -212,8 +217,6 @@ export default function App() {
 
         break;
       case 'inprogress':
-        setInProgressTasks((prevArray) => prevArray.filter((_, i) => i !== index));
-
         updatedTasks = {
           toDoTasks,
           inProgressTasks: inProgressTasks.filter((_, i) => i !== index),
@@ -222,12 +225,10 @@ export default function App() {
 
         break;
       case 'done':
-        setDoneTasks((prevArray) => prevArray.filter((_, i) => i !== index));
-
         updatedTasks = {
           toDoTasks,
           inProgressTasks,
-          doneTasks: doneTasks.filter((_, i) => i !== index),
+          doneTasks: doneTasks.filter((_, i) => i !== index)
         };
 
         break;
@@ -235,19 +236,21 @@ export default function App() {
         break;
     }
 
-    setAllTasks((prevAllTasks) => ({ ...prevAllTasks, ...updatedTasks }));
+    setTaskLists((prevTasks) => ({ ...prevTasks, ...updatedTasks }));
   };
 
   const handleInfoTask = (index) => {
     const selectedTask = selectedTasks[index];
-
     alert(`Name: ${selectedTask.name}\n\nDeadline: ${selectedTask.deadline}\n\nTask type: ${selectedTask.type}`);
   };
 
   const handleTasksChange = (array, type, color) => {
     setSelectedTasks(array);
-    setTaskType(type);
-    setTaskColor(color);
+    setTask({
+      ...task,
+      taskType: type,
+      taskColor: color
+    });
   };
 
   const moveTaskForward = (type, index) => {
@@ -258,9 +261,6 @@ export default function App() {
 
     switch (type) {
       case 'todo':
-        setToDoTasks((prevArray) => prevArray.filter((_, i) => i !== index));
-        setInProgressTasks([...inProgressTasks, { ...movedTask, type: 'inprogress' }]);
-
         updatedTasks = {
           toDoTasks: toDoTasks.filter((_, i) => i !== index),
           inProgressTasks: [...inProgressTasks, { ...movedTask, type: 'inprogress' }],
@@ -269,9 +269,6 @@ export default function App() {
 
         break;
       case 'inprogress':
-        setInProgressTasks((prevArray) => prevArray.filter((_, i) => i !== index));
-        setDoneTasks([...doneTasks, { ...movedTask, type: 'done' }]);
-
         updatedTasks = {
           toDoTasks,
           inProgressTasks: inProgressTasks.filter((_, i) => i !== index),
@@ -283,7 +280,7 @@ export default function App() {
         break;
     }
 
-    setAllTasks((prevAllTasks) => ({ ...prevAllTasks, ...updatedTasks }));
+    setTaskLists((prevTasks) => ({ ...prevTasks, ...updatedTasks }));
   };
 
   const moveTaskBackward = (type, index) => {
@@ -294,9 +291,6 @@ export default function App() {
 
     switch (type) {
       case 'inprogress':
-        setInProgressTasks((prevArray) => prevArray.filter((_, i) => i !== index));
-        setToDoTasks([...toDoTasks, { ...movedTask, type: 'todo' }]);
-
         updatedTasks = {
           toDoTasks: [...toDoTasks, { ...movedTask, type: 'todo' }],
           inProgressTasks: inProgressTasks.filter((_, i) => i !== index),
@@ -305,9 +299,6 @@ export default function App() {
 
         break;
       case 'done':
-        setDoneTasks((prevArray) => prevArray.filter((_, i) => i !== index));
-        setInProgressTasks([...inProgressTasks, { ...movedTask, type: 'inprogress' }]);
-
         updatedTasks = {
           toDoTasks,
           inProgressTasks: [...inProgressTasks, { ...movedTask, type: 'inprogress' }],
@@ -319,12 +310,15 @@ export default function App() {
         break;
     }
 
-    setAllTasks((prevAllTasks) => ({ ...prevAllTasks, ...updatedTasks }));
+    setTaskLists((prevTasks) => ({ ...prevTasks, ...updatedTasks }));
   };
 
   const closeDialog = () => {
-    setTaskName('');
-    setTaskDeadline(new Date());
+    setTask({
+      ...task,
+      taskName: '',
+      taskDeadline: new Date()
+    })
 
     if (editing) {
       setEditing(false);
@@ -356,7 +350,10 @@ export default function App() {
 
   const handleDateConfirm = (date) => {
     hideDatePicker();
-    setTaskDeadline(date);
+    setTask({
+      ...task,
+      taskDeadline: date
+    });
   };
 
   const showWarningMessage = (message) => {
@@ -388,8 +385,6 @@ export default function App() {
         <View style={styles.tasksWrapper}>
           <View style={styles.tasksHeader}>
             <Text style={styles.sectionTitle}>Today</Text>
-
-            <Text style={styles.currentTime}>{currentTime.toLocaleTimeString()}</Text>
           </View>
 
           <Text style={styles.sectionDate}>{getCurrentDate()}</Text>
@@ -451,7 +446,10 @@ export default function App() {
 
                 <TextInput
                   value={taskName}
-                  onChangeText={(text) => setTaskName(text)}
+                  onChangeText={(name) => setTask({
+                    ...task,
+                    taskName: name,
+                  })}
                   placeholder="Task name"
                   style={styles.dialogInput}
                 />
@@ -510,12 +508,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 60,
     fontWeight: '700',
-  },
-  currentTime: {
-    marginTop: 15,
-    fontSize: 20,
-    fontWeight: '500',
-    color: 'grey'
   },
   sectionDate: {
     marginTop: 10,
